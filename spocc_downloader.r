@@ -11,6 +11,8 @@ if (!requireNamespace("tidyverse", quietly = TRUE)) install.packages("tidyverse"
 require(tidyverse)
 if (!requireNamespace("sf", quietly = TRUE)) install.packages("sf")
 require(sf)
+if (!requireNamespace("lubridate", quietly = TRUE)) install.packages("lubridate")
+require(lubridate)
 if (!requireNamespace("arcgisbinding", quietly = TRUE)) install.packages("arcgisbinding")
 require(arcgisbinding)
 
@@ -61,24 +63,29 @@ names(recs_inat)
 names(recs_gbif)
 names(recs_idig)
 
-recs_inat_terse <- recs_inat[c("id","name","positional_accuracy","public_positional_accuracy","quality_grade","captive","geoprivacy","obscured","longitude","latitude","taxon.conservation_status.geoprivacy","geojson")]
-recs_gbif_terse <- recs_gbif[c("key","species","longitude", "latitude","coordinateUncertaintyInMeters","issues","georeferenceProtocol","locationRemarks","footprintWKT" )]
+recs_inat_terse <- recs_inat[c("id","name","positional_accuracy","public_positional_accuracy", "observed_on","quality_grade","captive","geoprivacy","obscured","longitude","latitude","taxon.conservation_status.geoprivacy","geojson")]
+recs_gbif_terse <- recs_gbif[c("key","species","longitude", "latitude","coordinateUncertaintyInMeters","year","issues","georeferenceProtocol","locationRemarks","footprintWKT" )]
 recs_idig_terse <- recs_idig[c("recordids","name","country","datasetid","datecollected","longitude","latitude","coordinateuncertainty","flags")]
 
 recs_inat_terse$source <- "inat"
 recs_gbif_terse$source <- "gbif"
 recs_idig_terse$source <- "idig"
 
+# standardize the species name column
 recs_inat_terse <- recs_inat_terse %>% 
-  rename(rec_id=id,sp_name=name)
+  rename(rec_id=id, sp_name=name, coordinatencertaintyMeters=public_positional_accuracy)
 recs_gbif_terse <- recs_gbif_terse %>% 
-  rename(rec_id=key,sp_name=species)
+  rename(rec_id=key, sp_name=species, coordinatencertaintyMeters=coordinateUncertaintyInMeters)
 recs_idig_terse <- recs_idig_terse %>% 
-  rename(rec_id=recordids,sp_name=name)
+  rename(rec_id=recordids, sp_name=name, coordinatencertaintyMeters=coordinateuncertainty)
 
 # change idig sp name to upcase
 recs_idig_terse$sp_name <- str_replace(recs_idig_terse$sp_name, "^\\w{1}", toupper)
 
+# update lastobs year
+recs_inat_terse$year <- year(parse_date_time(recs_inat_terse$observed_on,"ymd"))
+recs_gbif_terse$year <- recs_gbif_terse$year
+recs_idig_terse$year <- year(parse_date_time(recs_idig_terse$datecollected,"ymd"))
 
 # drop missing coordinates
 recs_inat_terse <- recs_inat_terse[which(!is.na(recs_inat_terse$latitude)),]
@@ -87,20 +94,31 @@ recs_idig_terse <- recs_idig_terse[which(!is.na(recs_idig_terse$latitude)),]
 
 # fill in default uncertainty distance if not present
 def_uncertainty <- 300 # meters
-
+recs_inat_terse$coordinatencertaintyMeters <- recs_inat_terse$coordinatencertaintyMeters %>% replace_na(def_uncertainty)
+recs_gbif_terse$coordinatencertaintyMeters <- recs_gbif_terse$coordinatencertaintyMeters %>% replace_na(def_uncertainty)
+recs_idig_terse$coordinatencertaintyMeters <- recs_idig_terse$coordinatencertaintyMeters %>% replace_na(def_uncertainty)
 
 #3
-sortOrder <- c("rec_id","sp_name","longitude", "latitude")
+sortOrder <- c("source","rec_id","sp_name","longitude", "latitude","coordinatencertaintyMeters","year") #recs_inat_sf <- bamona_sf[final_fields]
 
 
 # create the spatial layers
 # create a spatial layer
 recs_inat_sf <- st_as_sf(recs_inat_terse, coords=c("longitude","latitude"), crs="+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
-#recs_inat_sf <- bamona_sf[final_fields]
 recs_inat_sf <- st_transform(recs_inat_sf, crs="+proj=aea +lat_0=40 +lon_0=-96 +lat_1=20 +lat_2=60 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +type=crs") # reproject to the NA albers
 arc.write(path=here::here("_data","output","extData.gdb","pt_iNat"), recs_inat_sf, overwrite=TRUE) # write a feature class into the geodatabase
+recs_inat_buffer <- st_buffer(recs_inat_sf, dist=recs_inat_sf$coordinatencertaintyMeters) # buffer
+arc.write(path=here::here("_data","output","extData.gdb","buff_iNat"), recs_inat_buffer, overwrite=TRUE) # write a feature class into the geodatabase
 
-bamona_buffer <- st_buffer(bamona_sf, dist=100) # buffer by 100m
-arc.write(path=here::here("_data","output",updateName,"SGCN.gdb","final_BAMONA"), bamona_buffer, overwrite=TRUE) # write a feature class into the geodatabase
+recs_gbif_sf <- st_as_sf(recs_gbif_terse, coords=c("longitude","latitude"), crs="+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+recs_gbif_sf <- st_transform(recs_gbif_sf, crs="+proj=aea +lat_0=40 +lon_0=-96 +lat_1=20 +lat_2=60 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +type=crs") # reproject to the NA albers
+arc.write(path=here::here("_data","output","extData.gdb","pt_gbif"), recs_gbif_sf, overwrite=TRUE) # write a feature class into the geodatabase
+recs_gbif_buffer <- st_buffer(recs_gbif_sf, dist=recs_gbif_sf$coordinatencertaintyMeters) # buffer
+arc.write(path=here::here("_data","output","extData.gdb","buff_gbif"), recs_gbif_buffer, overwrite=TRUE) # write a feature class into the geodatabase
 
+recs_idig_sf <- st_as_sf(recs_idig_terse, coords=c("longitude","latitude"), crs="+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+recs_idig_sf <- st_transform(recs_idig_sf, crs="+proj=aea +lat_0=40 +lon_0=-96 +lat_1=20 +lat_2=60 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +type=crs") # reproject to the NA albers
+arc.write(path=here::here("_data","output","extData.gdb","pt_idig"), recs_idig_sf, overwrite=TRUE) # write a feature class into the geodatabase
+recs_idig_buffer <- st_buffer(recs_inat_sf, dist=recs_idig_sf$coordinatencertaintyMeters) # buffer
+arc.write(path=here::here("_data","output","extData.gdb","buff_idig"), recs_idig_buffer, overwrite=TRUE) # write a feature class into the geodatabase
 
