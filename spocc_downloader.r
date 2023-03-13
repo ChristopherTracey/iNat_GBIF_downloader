@@ -101,14 +101,20 @@ recs_idig_terse$coordinatencertaintyMeters <- recs_idig_terse$coordinatencertain
 #3
 sortOrder <- c("source","rec_id","sp_name","longitude", "latitude","coordinatencertaintyMeters","year") #recs_inat_sf <- bamona_sf[final_fields]
 
+recs_inat_terse <- recs_inat_terse[sortOrder]
+recs_gbif_terse <- recs_gbif_terse[sortOrder]
+recs_idig_terse <- recs_idig_terse[sortOrder]
+
+recs_obs <- rbind(recs_inat_terse, recs_gbif_terse, recs_idig_terse)
+
 
 # create the spatial layers
 # create a spatial layer
-recs_inat_sf <- st_as_sf(recs_inat_terse, coords=c("longitude","latitude"), crs="+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
-recs_inat_sf <- st_transform(recs_inat_sf, crs="+proj=aea +lat_0=40 +lon_0=-96 +lat_1=20 +lat_2=60 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +type=crs") # reproject to the NA albers
-arc.write(path=here::here("_data","output","extData.gdb","pt_iNat"), recs_inat_sf, overwrite=TRUE) # write a feature class into the geodatabase
-recs_inat_buffer <- st_buffer(recs_inat_sf, dist=recs_inat_sf$coordinatencertaintyMeters) # buffer
-arc.write(path=here::here("_data","output","extData.gdb","buff_iNat"), recs_inat_buffer, overwrite=TRUE) # write a feature class into the geodatabase
+recs_obs_sf <- st_as_sf(recs_obs, coords=c("longitude","latitude"), crs="+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+recs_obs_sf <- st_transform(recs_obs_sf, crs="+proj=aea +lat_0=40 +lon_0=-96 +lat_1=20 +lat_2=60 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +type=crs") # reproject to the NA albers
+arc.write(path=here::here("_data","output","extData.gdb","pt_obs"), recs_obs_sf, overwrite=TRUE) # write a feature class into the geodatabase
+recs_obs_buffer <- st_buffer(recs_obs_sf, dist=recs_obs_sf$coordinatencertaintyMeters) # buffer
+arc.write(path=here::here("_data","output","extData.gdb","buff_obs"), recs_obs_buffer, overwrite=TRUE) # write a feature class into the geodatabase
 
 recs_gbif_sf <- st_as_sf(recs_gbif_terse, coords=c("longitude","latitude"), crs="+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
 recs_gbif_sf <- st_transform(recs_gbif_sf, crs="+proj=aea +lat_0=40 +lon_0=-96 +lat_1=20 +lat_2=60 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +type=crs") # reproject to the NA albers
