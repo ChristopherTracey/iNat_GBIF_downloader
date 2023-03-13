@@ -107,6 +107,9 @@ recs_idig_terse <- recs_idig_terse[sortOrder]
 
 recs_obs <- rbind(recs_inat_terse, recs_gbif_terse, recs_idig_terse)
 
+recs_obs$longitude <- as.numeric(recs_obs$longitude)
+recs_obs$latitude <- as.numeric(recs_obs$latitude)
+recs_obs$year <- as.integer(recs_obs$year)
 
 # create the spatial layers
 # create a spatial layer
