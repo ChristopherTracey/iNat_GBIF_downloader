@@ -115,16 +115,3 @@ recs_obs_sf <- st_transform(recs_obs_sf, crs="+proj=aea +lat_0=40 +lon_0=-96 +la
 arc.write(path=here::here("_data","output","extData.gdb","pt_obs"), recs_obs_sf, overwrite=TRUE) # write a feature class into the geodatabase
 recs_obs_buffer <- st_buffer(recs_obs_sf, dist=recs_obs_sf$coordinatencertaintyMeters) # buffer
 arc.write(path=here::here("_data","output","extData.gdb","buff_obs"), recs_obs_buffer, overwrite=TRUE) # write a feature class into the geodatabase
-
-recs_gbif_sf <- st_as_sf(recs_gbif_terse, coords=c("longitude","latitude"), crs="+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
-recs_gbif_sf <- st_transform(recs_gbif_sf, crs="+proj=aea +lat_0=40 +lon_0=-96 +lat_1=20 +lat_2=60 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +type=crs") # reproject to the NA albers
-arc.write(path=here::here("_data","output","extData.gdb","pt_gbif"), recs_gbif_sf, overwrite=TRUE) # write a feature class into the geodatabase
-recs_gbif_buffer <- st_buffer(recs_gbif_sf, dist=recs_gbif_sf$coordinatencertaintyMeters) # buffer
-arc.write(path=here::here("_data","output","extData.gdb","buff_gbif"), recs_gbif_buffer, overwrite=TRUE) # write a feature class into the geodatabase
-
-recs_idig_sf <- st_as_sf(recs_idig_terse, coords=c("longitude","latitude"), crs="+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
-recs_idig_sf <- st_transform(recs_idig_sf, crs="+proj=aea +lat_0=40 +lon_0=-96 +lat_1=20 +lat_2=60 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +type=crs") # reproject to the NA albers
-arc.write(path=here::here("_data","output","extData.gdb","pt_idig"), recs_idig_sf, overwrite=TRUE) # write a feature class into the geodatabase
-recs_idig_buffer <- st_buffer(recs_inat_sf, dist=recs_idig_sf$coordinatencertaintyMeters) # buffer
-arc.write(path=here::here("_data","output","extData.gdb","buff_idig"), recs_idig_buffer, overwrite=TRUE) # write a feature class into the geodatabase
-
